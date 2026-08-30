@@ -1,64 +1,48 @@
-name: Render HyperFrames Video
+name: Render BridgePatch Stage 2
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - 'index.html'
-      - 'assets/**'
-      - '.github/workflows/render.yml'
+      - index.html
+      - TRANSITIONS.json
+      - STORYBOARD.md
+      - assets/**
+      - scripts/**
+      - package.json
+      - .github/workflows/render.yml
 
 jobs:
   render:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node 22
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-
-      - name: Install FFmpeg and Japanese fonts
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check
+      - name: Generate original BGM and sound effects
+        run: bash scripts/generate_audio.sh dist
+      - name: Render H.264/AAC MP4
+        run: npm run render
+      - name: Verify final media
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-noto-cjk
-
-      - name: Install HyperFrames
-        run: npm install -g hyperframes@0.8.19
-
-      - name: Verify environment
-        run: |
-          node --version
-          ffmpeg -version | head -n 1
-          hyperframes --version
-
-      - name: Render BridgePatch
-        run: |
-          mkdir -p renders
-          hyperframes render \
-            --output renders/bridgepatch.mp4 \
-            --fps 30 \
-            --quality standard \
-            --workers 2
-
-      - name: Inspect output
-        run: |
-          ls -lh renders/bridgepatch.mp4
-          ffprobe -v error \
-            -show_entries format=duration \
-            -show_entries stream=width,height \
-            -of default=noprint_wrappers=1 \
-            renders/bridgepatch.mp4
-
-      - name: Upload rendered MP4
-        uses: actions/upload-artifact@v4
+          ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,r_frame_rate -show_entries format=duration -of json dist/bridgepatch_stage2.mp4 | tee dist/video-probe.json
+          ffprobe -v error -select_streams a:0 -show_entries stream=codec_name,codec_type,sample_rate,channels -of json dist/bridgepatch_stage2.mp4 | tee dist/audio-probe.json
+          test "$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_type -of csv=p=0 dist/bridgepatch_stage2.mp4)" = "audio"
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 dist/bridgepatch_stage2.mp4)" = "1080"
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 dist/bridgepatch_stage2.mp4)" = "1920"
+      - uses: actions/upload-artifact@v4
         with:
-          name: bridgepatch-render
-          path: renders/bridgepatch.mp4
+          name: bridgepatch-stage2-mp4
+          path: |
+            dist/bridgepatch_stage2.mp4
+            dist/video-probe.json
+            dist/audio-probe.json
+            TRANSITIONS.json
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30

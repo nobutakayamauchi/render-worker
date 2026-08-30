@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "composition": "bridgepatch-social",
+  "duration_seconds": 15,
+  "design_principle": "Keep A fixed on the left and B fixed on the right; guide attention through their desks, PCs, faces, and status UI without flipping or rebuilding the source images.",
+  "cuts": [
+    {
+      "source_image": "assets/01_email_reaction.png",
+      "next_image": "assets/02_workflow_diverge.png",
+      "focal_subject_left": "A reacting to the incoming email beside the left PC",
+      "focal_subject_right": "B reacting to the same email beside the right PC",
+      "dominant_action": "A shared notification lands, then attention converges on the PCs",
+      "continuity_target": "Match the center desk/PC zone into the 10:30 workflow state while preserving A-left and B-right",
+      "camera_motion": "slow push-in toward the shared PC line, ending slightly low and centered",
+      "transition_type": "matched zoom",
+      "duration": 0.24,
+      "easing": "power2.inOut",
+      "overlay_timing": { "time": 0.0, "headline": 0.08, "mail_cards": 0.18, "dialogue": 0.32 },
+      "audio_cue": { "time": 0.18, "type": "double soft mail ding", "level_db": -13 }
+    },
+    {
+      "source_image": "assets/02_workflow_diverge.png",
+      "next_image": "assets/03_lunch_contrast.png",
+      "focal_subject_left": "A manually working through accumulating red tasks",
+      "focal_subject_right": "B monitoring BridgePatch completion on the green UI",
+      "dominant_action": "Attention travels from A's growing queue to B's completed processing state",
+      "continuity_target": "Carry the left/right work contrast and desk line into the matched lunch contrast",
+      "camera_motion": "lateral pan from the left task stack to the right completion card",
+      "transition_type": "foreground card slide",
+      "duration": 0.22,
+      "easing": "power2.inOut",
+      "overlay_timing": { "time": 2.2, "left_task": 2.42, "right_progress": 2.58, "completion": 3.72 },
+      "audio_cue": { "time": 2.2, "type": "soft time tick plus confirmation at 3.72", "level_db": -15 }
+    },
+    {
+      "source_image": "assets/03_lunch_contrast.png",
+      "next_image": "assets/04_afternoon_contrast.png",
+      "focal_subject_left": "A eating while still working at the left desk",
+      "focal_subject_right": "B calmly enjoying lunch at the right desk",
+      "dominant_action": "The two lunch reactions appear on the same visual beat for a quiet contrast",
+      "continuity_target": "Hold both subjects at equal scale, then reveal the afternoon through the desk split",
+      "camera_motion": "subtle parallax with equal and opposite drift around the center divider",
+      "transition_type": "masked wipe",
+      "duration": 0.26,
+      "easing": "power1.inOut",
+      "overlay_timing": { "time": 4.8, "left_dialogue": 5.18, "right_dialogue": 5.34 },
+      "audio_cue": { "time": 4.8, "type": "soft time click", "level_db": -16 }
+    },
+    {
+      "source_image": "assets/04_afternoon_contrast.png",
+      "next_image": "assets/05_final_payoff.png",
+      "focal_subject_left": "A visibly fatigued with remaining red tasks",
+      "focal_subject_right": "B with room for mentoring, coffee, and calm review",
+      "dominant_action": "Focus shifts from A's fatigue to B's available attention and completed work",
+      "continuity_target": "Land on B's right-side final-check area while A remains visible on the left",
+      "camera_motion": "focus shift simulated by alternating left/right overlay emphasis and a restrained rightward push",
+      "transition_type": "focus shift",
+      "duration": 0.24,
+      "easing": "power2.inOut",
+      "overlay_timing": { "time": 8.0, "left_remaining": 8.28, "right_complete": 8.42, "checks": [8.35, 9.05] },
+      "audio_cue": { "time": 8.35, "type": "two muted confirmation clicks", "level_db": -17 }
+    },
+    {
+      "source_image": "assets/05_final_payoff.png",
+      "next_image": "endcard",
+      "focal_subject_left": "A finishing exhausted, then looking toward B",
+      "focal_subject_right": "B calmly performing the final human check",
+      "dominant_action": "Push into B's final check, leave a short beat, then reveal A's punchline",
+      "continuity_target": "Resolve green approval into the BridgePatch green brand accent on the end card",
+      "camera_motion": "slow right-biased push-in followed by a clean editorial release",
+      "transition_type": "hard editorial cut",
+      "duration": 0.12,
+      "easing": "power1.out",
+      "overlay_timing": { "time": 11.2, "approval": 11.54, "left_done": 11.44, "right_done": 11.56, "punchline": 12.72, "endcard": 13.6 },
+      "audio_cue": { "time": 11.9, "type": "small check; clean landing at 13.62", "level_db": -13 }
+    }
+  ]
+}
