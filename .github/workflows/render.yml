@@ -5,38 +5,52 @@ on:
   push:
     branches: [main]
     paths:
-      - index.html
-      - TRANSITIONS.json
-      - STORYBOARD.md
-      - assets/**
-      - scripts/**
-      - package.json
-      - .github/workflows/render.yml
+      - 'index.html'
+      - 'TRANSITIONS.json'
+      - 'STORYBOARD.md'
+      - 'assets/**'
+      - 'scripts/**'
+      - 'package.json'
+      - '.github/workflows/render.yml'
 
 jobs:
   render:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
-      - run: npm install --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium
-      - run: npm run check
-      - name: Generate original BGM and sound effects
+          node-version: '22'
+      - name: Install render dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-cjk
+          npm install -g hyperframes@0.8.19
+      - name: Lightweight checks
+        run: node scripts/check.mjs
+      - name: Render composition with HyperFrames
+        run: |
+          mkdir -p renders dist
+          hyperframes render --output renders/bridgepatch-video.mp4 --fps 30 --quality standard --workers 2
+      - name: Generate original BGM and restrained sound effects
         run: bash scripts/generate_audio.sh dist
-      - name: Render H.264/AAC MP4
-        run: npm run render
+      - name: Mux verified H.264 and AAC master
+        run: |
+          ffmpeg -hide_banner -loglevel error -y -i renders/bridgepatch-video.mp4 -i dist/bridgepatch_audio.wav -t 15 -map 0:v:0 -map 1:a:0 -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k -ar 48000 -movflags +faststart dist/bridgepatch_stage2.mp4
       - name: Verify final media
         run: |
           ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,r_frame_rate -show_entries format=duration -of json dist/bridgepatch_stage2.mp4 | tee dist/video-probe.json
           ffprobe -v error -select_streams a:0 -show_entries stream=codec_name,codec_type,sample_rate,channels -of json dist/bridgepatch_stage2.mp4 | tee dist/audio-probe.json
           test "$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_type -of csv=p=0 dist/bridgepatch_stage2.mp4)" = "audio"
+          test "$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 dist/bridgepatch_stage2.mp4)" = "aac"
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 dist/bridgepatch_stage2.mp4)" = "h264"
           test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 dist/bridgepatch_stage2.mp4)" = "1080"
           test "$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 dist/bridgepatch_stage2.mp4)" = "1920"
-      - uses: actions/upload-artifact@v4
+      - name: Upload final MP4 and probes
+        uses: actions/upload-artifact@v4
         with:
           name: bridgepatch-stage2-mp4
           path: |
