@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BridgePatch — 面倒くさい仕事だけ、こいつに任せる。</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #0c1014; }
+    body { font-family: "Noto Sans JP", sans-serif; }
+    #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: #0c1014; color: #fff; }
+    .clip { position: absolute; inset: 0; overflow: hidden; opacity: 0; }
+    .scene-img { position: absolute; inset: -3%; width: 106%; height: 106%; object-fit: cover; transform-origin: center; }
+    .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4,8,12,.56) 0%, rgba(4,8,12,.03) 27%, rgba(4,8,12,.02) 63%, rgba(4,8,12,.58) 100%); }
+    .topbar { position: absolute; left: 72px; right: 72px; top: 86px; display: flex; align-items: center; justify-content: space-between; }
+    .time { padding: 13px 23px 12px; border-radius: 999px; color: #111820; background: rgba(255,255,255,.94); font: 800 34px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -.03em; box-shadow: 0 10px 36px rgba(0,0,0,.18); }
+    .eyebrow { font-size: 52px; line-height: 1.18; font-weight: 800; letter-spacing: -.04em; text-shadow: 0 3px 20px rgba(0,0,0,.48); }
+    .caption-row { position: absolute; left: 54px; right: 54px; bottom: 104px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    .caption { min-height: 106px; display: grid; place-items: center; padding: 22px 24px; border-radius: 25px; background: rgba(11,16,21,.86); backdrop-filter: blur(16px); font-size: 42px; font-weight: 800; line-height: 1.25; text-align: center; letter-spacing: -.035em; box-shadow: 0 14px 44px rgba(0,0,0,.24); }
+    .caption.a { border-top: 6px solid #ff645f; }
+    .caption.b { border-top: 6px solid #45d6a2; }
+    .caption.wide { grid-column: 1 / -1; }
+    .mini-ui { position: absolute; top: 246px; width: 390px; padding: 17px 22px; border-radius: 20px; display: flex; gap: 13px; align-items: center; background: rgba(12,17,22,.78); backdrop-filter: blur(14px); font-size: 29px; font-weight: 700; box-shadow: 0 12px 40px rgba(0,0,0,.22); }
+    .mini-ui.left { left: 74px; } .mini-ui.right { right: 74px; }
+    .dot { width: 17px; height: 17px; border-radius: 50%; flex: none; }
+    .red { color: #ff8a86; } .green { color: #65e7b8; }
+    .dot.red { background: #ff645f; } .dot.green { background: #45d6a2; }
+    .speech { position: absolute; bottom: 118px; width: 430px; padding: 25px 28px; border-radius: 27px; background: rgba(255,255,255,.94); color: #10161c; text-align: center; font-size: 46px; line-height: 1.18; font-weight: 900; letter-spacing: -.045em; box-shadow: 0 18px 50px rgba(0,0,0,.25); }
+    .speech.left { left: 62px; } .speech.right { right: 62px; }
+    .speech.left::after, .speech.right::after { content:""; position:absolute; bottom:-18px; border: 18px solid transparent; border-top-color: rgba(255,255,255,.94); }
+    .speech.left::after { left: 86px; } .speech.right::after { right: 86px; }
+    #s5-punch { position:absolute; left: 72px; right:72px; bottom: 82px; padding: 25px 30px; border-radius: 25px; background: rgba(11,16,21,.91); text-align:center; font-size:48px; font-weight:900; letter-spacing:-.045em; opacity:0; }
+    #approval { position:absolute; right:74px; top:248px; padding:17px 24px; border-radius:999px; background:rgba(12,22,18,.87); border:2px solid rgba(69,214,162,.72); color:#9af1d2; font-size:31px; font-weight:800; }
+    #endcard { background: #f4f7f6; color: #0f171b; }
+    #endcard::before { content:""; position:absolute; inset:0; background: radial-gradient(circle at 86% 18%, rgba(69,214,162,.18), transparent 34%), radial-gradient(circle at 10% 88%, rgba(255,100,95,.12), transparent 35%); }
+    .end-inner { position:absolute; inset:0; padding: 190px 92px 150px; display:flex; flex-direction:column; justify-content:center; }
+    #end-rule { width: 92px; height: 8px; border-radius: 99px; background: linear-gradient(90deg,#ff645f 0 48%,#45d6a2 52%); margin-bottom:46px; }
+    #end-copy { font-size: 77px; line-height: 1.18; font-weight: 900; letter-spacing: -.065em; }
+    #brand { margin-top: 84px; font-size: 92px; line-height:1; font-weight: 900; letter-spacing: -.07em; }
+    #brand .patch { color:#17a77a; }
+    #subcopy { margin-top:31px; font-size: 36px; font-weight: 700; color:#536068; letter-spacing:-.03em; }
+    .hf-mark { position:absolute; right:92px; bottom:92px; width:74px; height:74px; border-radius:22px; background:#11191e; display:grid; place-items:center; color:white; font-size:33px; font-weight:900; }
+  </style>
+</head>
+<body>
+<div id="stage" data-composition-id="bridgepatch-social" data-start="0" data-duration="15" data-fps="30" data-width="1080" data-height="1920">
+  <div id="scene1" class="clip" data-start="0" data-duration="2.2" data-track-index="0">
+    <img id="img1" class="scene-img" src="assets/01_email_reaction.png" alt="" />
+    <div class="shade"></div>
+    <div class="topbar"><div class="eyebrow">同じ仕事が来た。</div><div class="time">09:00</div></div>
+    <div id="mail-a" class="mini-ui left"><span class="dot red"></span>新着メール　1件</div>
+    <div id="mail-b" class="mini-ui right"><span class="dot green"></span>新着メール　1件</div>
+    <div class="caption-row"><div class="caption wide">うわ、めんどくせえ……</div></div>
+  </div>
+
+  <div id="scene2" class="clip" data-start="2.2" data-duration="2.6" data-track-index="0">
+    <img id="img2" class="scene-img" src="assets/02_workflow_diverge.png" alt="" />
+    <div class="shade"></div>
+    <div class="topbar"><div class="eyebrow">仕事量は同じ。</div><div class="time">10:30</div></div>
+    <div id="task-a" class="mini-ui left red"><span class="dot red"></span>未処理　•••</div>
+    <div id="task-b" class="mini-ui right green"><span class="dot green"></span>BridgePatch　処理中</div>
+    <div class="caption-row"><div class="caption a">全部、自分でやる</div><div class="caption b">定型作業だけ任せる</div></div>
+  </div>
+
+  <div id="scene3" class="clip" data-start="4.8" data-duration="3.2" data-track-index="0">
+    <img id="img3" class="scene-img" src="assets/03_lunch_contrast.png" alt="" />
+    <div class="shade"></div>
+    <div class="topbar"><div></div><div class="time">12:30</div></div>
+    <div id="lunch-a" class="speech left">終わんねぇ……</div>
+    <div id="lunch-b" class="speech right">昼飯うめぇ。</div>
+  </div>
+
+  <div id="scene4" class="clip" data-start="8" data-duration="3.2" data-track-index="0">
+    <img id="img4" class="scene-img" src="assets/04_afternoon_contrast.png" alt="" />
+    <div class="shade"></div>
+    <div class="topbar"><div class="eyebrow">面倒な仕事だけ、<br>片付いていく。</div><div class="time">15:00</div></div>
+    <div id="aft-a" class="mini-ui left red"><span class="dot red"></span>残り　•••</div>
+    <div id="aft-b" class="mini-ui right green"><span class="dot green"></span>定型処理　✓ ✓</div>
+  </div>
+
+  <div id="scene5" class="clip" data-start="11.2" data-duration="2.4" data-track-index="0">
+    <img id="img5" class="scene-img" src="assets/05_final_payoff.png" alt="" />
+    <div class="shade"></div>
+    <div class="topbar"><div></div><div class="time">17:00</div></div>
+    <div id="approval">最終確認　✓</div>
+    <div class="caption-row"><div class="caption a">できました……</div><div class="caption b">できました。</div></div>
+    <div id="s5-punch">……お前、ずるくね？</div>
+  </div>
+
+  <div id="endcard" class="clip" data-start="13.6" data-duration="1.4" data-track-index="0">
+    <div class="end-inner">
+      <div id="end-rule"></div>
+      <div id="end-copy">面倒くさい仕事だけ、<br>こいつに任せる。</div>
+      <div id="brand">Bridge<span class="patch">Patch</span></div>
+      <div id="subcopy">どうせやるなら、楽な方で。</div>
+    </div>
+    <div class="hf-mark">BP</div>
+  </div>
+</div>
+
+<script src="assets/gsap.min.js"></script>
+<script>
+  const tl = gsap.timeline({ paused: true });
+  const scenes = ["#scene1", "#scene2", "#scene3", "#scene4", "#scene5", "#endcard"];
+  const starts = [0, 2.2, 4.8, 8, 11.2, 13.6];
+  const durations = [2.2, 2.6, 3.2, 3.2, 2.4, 1.4];
+  scenes.forEach((s, i) => {
+    tl.set(s, { opacity: 1 }, starts[i]);
+    if (i < scenes.length - 1) tl.to(s, { opacity: 0, duration: 0.18, ease: "power1.inOut" }, starts[i] + durations[i] - 0.18);
+  });
+  tl.fromTo("#img1", { scale: 1.00, y: 14 }, { scale: 1.045, y: -10, duration: 2.2, ease: "none" }, 0);
+  tl.from(["#mail-a", "#mail-b"], { opacity: 0, y: -16, scale: .97, stagger: .06, duration: .22, ease: "power2.out" }, .18);
+  tl.fromTo("#img2", { scale: 1.035, x: -10 }, { scale: 1.055, x: 12, duration: 2.6, ease: "none" }, 2.2);
+  tl.from(["#task-a", "#task-b"], { opacity: 0, y: -12, stagger: .10, duration: .24, ease: "power2.out" }, 2.42);
+  tl.fromTo("#img3", { scale: 1.055 }, { scale: 1.015, duration: 3.2, ease: "none" }, 4.8);
+  tl.from("#lunch-a", { opacity: 0, y: 20, duration: .22, ease: "power2.out" }, 5.18);
+  tl.from("#lunch-b", { opacity: 0, y: 20, duration: .22, ease: "power2.out" }, 5.34);
+  tl.fromTo("#img4", { scale: 1.015, y: -8 }, { scale: 1.055, y: 12, duration: 3.2, ease: "none" }, 8);
+  tl.from("#aft-a", { opacity: 0, x: -16, duration: .24 }, 8.28);
+  tl.from("#aft-b", { opacity: 0, x: 16, duration: .24 }, 8.42);
+  tl.fromTo("#img5", { scale: 1.015 }, { scale: 1.055, duration: 2.4, ease: "none" }, 11.2);
+  tl.from("#approval", { opacity: 0, y: -13, scale: .96, duration: .24, ease: "power2.out" }, 11.54);
+  tl.to("#s5-punch", { opacity: 1, y: -8, duration: .20, ease: "power2.out" }, 12.72);
+  tl.from("#end-rule", { scaleX: 0, transformOrigin: "left center", duration: .24, ease: "power2.out" }, 13.68);
+  tl.from("#end-copy", { opacity: 0, y: 24, duration: .28, ease: "power2.out" }, 13.72);
+  tl.from("#brand", { opacity: 0, y: 18, duration: .25, ease: "power2.out" }, 13.91);
+  tl.from("#subcopy", { opacity: 0, y: 12, duration: .22, ease: "power2.out" }, 14.09);
+  tl.set({}, {}, 15);
+  window.__timelines = window.__timelines || {};
+  window.__timelines["bridgepatch-social"] = tl;
+  tl.seek(0);
+</script>
+</body>
+</html>
