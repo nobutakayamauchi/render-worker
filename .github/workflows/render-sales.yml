@@ -40,8 +40,20 @@ jobs:
 
       - name: Prepare isolated sales composition
         run: |
-          cp index.html index.bridgepatch.backup.html
+          cp index.html /tmp/bridgepatch-index.html
           cp sales_ad.html index.html
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          text = p.read_text()
+          needle = '  const tl = gsap.timeline({ paused:true });\n'
+          replacement = needle + '  window.__timelines = window.__timelines || {};\n  window.__timelines["ai-cm-render-sales-v1"] = tl;\n'
+          if needle not in text:
+              raise SystemExit('timeline creation marker not found')
+          p.write_text(text.replace(needle, replacement, 1))
+          PY
+          mv sales_ad.html /tmp/sales_ad.source.html
+          grep -q 'window.__timelines\["ai-cm-render-sales-v1"\] = tl' index.html
 
       - name: Render sales composition with HyperFrames
         run: |
@@ -74,8 +86,14 @@ jobs:
           duration="$(ffprobe -v error -show_entries format=duration -of csv=p=0 dist/ai_cm_render_sales_v1.mp4)"
           awk -v d="$duration" 'BEGIN { exit !(d >= 14.9 && d <= 15.1) }'
 
-      - name: Confirm BridgePatch source was not changed by render preparation
-        run: cmp -s index.html sales_ad.html && test -f index.bridgepatch.backup.html
+      - name: Confirm BridgePatch source preserved in repository checkout source
+        run: |
+          test -f /tmp/bridgepatch-index.html
+          test -f /tmp/sales_ad.source.html
+          grep -q 'BridgePatch' /tmp/bridgepatch-index.html
+
+      - name: Restore sales source for artifact packaging
+        run: cp /tmp/sales_ad.source.html sales_ad.html
 
       - name: Upload sales MP4 and probes
         uses: actions/upload-artifact@v4
