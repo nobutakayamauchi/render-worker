@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI CM Render — Sales Ad v1</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #080b0f; }
+    body { font-family: "Noto Sans JP", sans-serif; }
+    #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; color: #fff; background:#080b0f; }
+    .scene { position:absolute; inset:0; opacity:0; overflow:hidden; }
+    .scene img { position:absolute; width:100%; height:100%; object-fit:cover; }
+    .veil { position:absolute; inset:0; background:linear-gradient(180deg, rgba(5,8,12,.22), rgba(5,8,12,.04) 48%, rgba(5,8,12,.7)); }
+    .copy { position:absolute; left:64px; right:64px; bottom:120px; padding:28px 34px; border-radius:28px; background:rgba(7,11,16,.82); backdrop-filter:blur(18px); font-size:64px; font-weight:900; line-height:1.18; letter-spacing:-.055em; text-align:center; box-shadow:0 18px 60px rgba(0,0,0,.28); }
+    .small { font-size:48px; }
+    .before-grid { position:absolute; inset:160px 62px 330px; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr 1fr; gap:18px; }
+    .before-grid img { position:relative; width:100%; height:100%; object-fit:cover; border-radius:24px; box-shadow:0 16px 44px rgba(0,0,0,.24); }
+    .before-grid img:last-child { grid-column:1 / -1; width:50%; justify-self:center; }
+    .proof-badge { position:absolute; top:88px; left:64px; right:64px; padding:18px 26px; border-radius:999px; background:rgba(255,255,255,.92); color:#111820; text-align:center; font-size:38px; font-weight:900; letter-spacing:-.035em; }
+    .compare { position:absolute; inset:150px 55px 330px; display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+    .panel { position:relative; overflow:hidden; border-radius:30px; background:#121820; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+    .panel img { object-fit:cover; }
+    .panel-label { position:absolute; left:18px; top:18px; padding:12px 18px; border-radius:999px; background:rgba(10,13,18,.82); font-size:30px; font-weight:900; }
+    #end { background:linear-gradient(155deg,#f5f8f6 0%,#e9f5f0 58%,#dff1ea 100%); color:#0f171b; }
+    .end-inner { position:absolute; inset:0; padding:210px 82px 170px; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; }
+    .brand { font-size:108px; line-height:1; font-weight:950; letter-spacing:-.07em; }
+    .sub { margin-top:28px; font-size:46px; line-height:1.25; font-weight:800; letter-spacing:-.04em; }
+    .price { margin-top:72px; font-size:104px; font-weight:950; letter-spacing:-.06em; }
+    .cta { margin-top:56px; width:100%; padding:30px 34px; border-radius:24px; background:#11191e; color:#fff; font-size:54px; font-weight:950; text-align:center; letter-spacing:-.05em; }
+    .rule { width:116px; height:10px; border-radius:999px; background:#11191e; margin-bottom:52px; }
+  </style>
+</head>
+<body>
+<div id="stage" data-composition-id="ai-cm-render-sales-v1" data-start="0" data-duration="15" data-fps="30" data-width="1080" data-height="1920">
+  <section id="s1" class="scene">
+    <div class="before-grid">
+      <img src="assets/01_email_reaction.png" alt="" />
+      <img src="assets/02_workflow_diverge.png" alt="" />
+      <img src="assets/03_lunch_contrast.png" alt="" />
+      <img src="assets/04_afternoon_contrast.png" alt="" />
+      <img src="assets/05_final_payoff.png" alt="" />
+    </div>
+    <div class="copy">この静止画が、</div>
+  </section>
+
+  <section id="s2" class="scene">
+    <img id="hero2" src="assets/02_workflow_diverge.png" alt="" />
+    <div class="veil"></div>
+    <div class="copy">15秒の広告になる。</div>
+  </section>
+
+  <section id="s3" class="scene">
+    <img id="hero3" src="assets/03_lunch_contrast.png" alt="" />
+    <div class="veil"></div>
+    <div class="proof-badge">モーション・字幕・BGM・SEまで</div>
+    <div class="copy small">撮影なし。編集作業なし。</div>
+  </section>
+
+  <section id="s4" class="scene">
+    <img id="hero4" src="assets/05_final_payoff.png" alt="" />
+    <div class="veil"></div>
+    <div class="proof-badge">この広告、静止画5枚から作りました。</div>
+    <div class="copy small">静止画3〜5枚を渡すだけ。</div>
+  </section>
+
+  <section id="s5" class="scene">
+    <div class="compare">
+      <div class="panel"><img src="assets/01_email_reaction.png" alt="" /><div class="panel-label">BEFORE</div></div>
+      <div class="panel"><img id="afterImg" src="assets/04_afternoon_contrast.png" alt="" /><div class="panel-label">AFTER</div></div>
+    </div>
+    <div class="copy small">縦型SNS広告まで完成</div>
+  </section>
+
+  <section id="end" class="scene">
+    <div class="end-inner">
+      <div class="rule"></div>
+      <div class="brand">AI CM Render</div>
+      <div class="sub">静止画3〜5枚から<br>15秒の縦型SNS広告</div>
+      <div class="price">19,800円</div>
+      <div class="cta">静止画をCMにする</div>
+    </div>
+  </section>
+</div>
+<script src="assets/gsap.min.js"></script>
+<script>
+  const tl = gsap.timeline({ paused:true });
+  const scenes = ["#s1", "#s2", "#s3", "#s4", "#s5", "#end"];
+  const starts = [0, 1.5, 4.0, 7.5, 11.0, 13.0];
+  const durations = [1.5, 2.5, 3.5, 3.5, 2.0, 2.0];
+  scenes.forEach((s, i) => {
+    tl.set(s, { opacity:1 }, starts[i]);
+    if (i < scenes.length - 1) tl.to(s, { opacity:0, duration:.16, ease:"power1.inOut" }, starts[i] + durations[i] - .16);
+  });
+
+  tl.from("#s1 .before-grid img", { opacity:0, scale:.94, stagger:.07, duration:.18, ease:"power2.out" }, 0.08);
+  tl.from("#s1 .copy", { opacity:0, y:24, duration:.24, ease:"power2.out" }, .55);
+
+  tl.fromTo("#s2", { clipPath:"inset(12% 12% 12% 12% round 36px)" }, { clipPath:"inset(0% 0% 0% 0% round 0px)", duration:.34, ease:"power3.inOut" }, 1.42);
+  tl.fromTo("#hero2", { scale:1.0, x:-22 }, { scale:1.1, x:24, duration:2.5, ease:"none" }, 1.5);
+  tl.from("#s2 .copy", { opacity:0, y:28, scale:.97, duration:.28, ease:"power2.out" }, 1.74);
+
+  tl.fromTo("#hero3", { scale:1.08, y:18 }, { scale:1.02, y:-18, duration:3.5, ease:"none" }, 4.0);
+  tl.from("#s3 .proof-badge", { opacity:0, y:-20, duration:.28, ease:"power2.out" }, 4.18);
+  tl.from("#s3 .copy", { opacity:0, y:24, duration:.28, ease:"power2.out" }, 4.7);
+
+  tl.fromTo("#s4", { clipPath:"inset(0 100% 0 0)" }, { clipPath:"inset(0 0% 0 0)", duration:.32, ease:"power3.inOut" }, 7.42);
+  tl.fromTo("#hero4", { scale:1.02 }, { scale:1.09, duration:3.5, ease:"none" }, 7.5);
+  tl.from("#s4 .proof-badge", { opacity:0, y:-18, duration:.28 }, 7.74);
+  tl.from("#s4 .copy", { opacity:0, y:24, duration:.28 }, 8.12);
+
+  tl.from("#s5 .panel", { opacity:0, y:26, scale:.97, stagger:.12, duration:.32, ease:"power2.out" }, 11.0);
+  tl.fromTo("#afterImg", { scale:1.0 }, { scale:1.1, duration:2.0, ease:"none" }, 11.0);
+  tl.from("#s5 .copy", { opacity:0, y:20, duration:.24 }, 11.55);
+
+  tl.from("#end .rule", { scaleX:0, transformOrigin:"left", duration:.22 }, 13.08);
+  tl.from("#end .brand", { opacity:0, y:28, duration:.3, ease:"power2.out" }, 13.18);
+  tl.from("#end .sub", { opacity:0, y:20, duration:.26 }, 13.42);
+  tl.from("#end .price", { opacity:0, scale:.92, duration:.25, ease:"back.out(1.4)" }, 13.68);
+  tl.from("#end .cta", { opacity:0, y:22, duration:.24 }, 14.0);
+
+  window.__seekBridgePatch = (seconds) => tl.pause().seek(Math.max(0, Math.min(15, seconds)), false);
+  window.__renderReady = true;
+  tl.seek(0, false).pause();
+</script>
+</body>
+</html>
