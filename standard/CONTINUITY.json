@@ -1,0 +1,13 @@
+{
+  "version": "standard-trial-0",
+  "mode": "source-preserving",
+  "rules": {
+    "character_identity": "Do not synthesize or alter faces in trial 0",
+    "product_identity": "Preserve source pixels; no generative replacement",
+    "environment_identity": "Preserve source images",
+    "wardrobe": "Preserve source images",
+    "lighting": "Only global CSS grading allowed",
+    "screen_contents": "Do not invent readable UI text"
+  },
+  "known_limit": "No true alternate-angle generation in trial 0; this artifact is only for validating CM-like cut density and pacing before the generative stage."
+}
