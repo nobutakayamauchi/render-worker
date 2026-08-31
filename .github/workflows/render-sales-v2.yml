@@ -1,0 +1,79 @@
+name: Render AI CM Render Sales Ad v2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'sales_ad_v2.html'
+      - 'assets/**'
+      - 'scripts/generate_sales_audio.sh'
+      - '.github/workflows/render-sales-v2.yml'
+
+jobs:
+  render-sales-v2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-cjk
+          npm install -g hyperframes@0.8.19
+      - name: Validate v2 inputs
+        run: |
+          test -f sales_ad_v2.html
+          test -f sales_ad.html
+          test -f scripts/generate_sales_audio.sh
+          for f in assets/01_email_reaction.png assets/02_workflow_diverge.png assets/03_lunch_contrast.png assets/04_afternoon_contrast.png assets/05_final_payoff.png assets/gsap.min.js; do test -f "$f"; done
+          grep -q 'data-composition-id="ai-cm-render-sales-v2"' sales_ad_v2.html
+          grep -q 'この広告、静止画5枚から作りました。' sales_ad_v2.html
+          grep -q '19,800円' sales_ad_v2.html
+      - name: Prepare isolated v2 composition
+        run: |
+          cp index.html /tmp/bridgepatch-index.html
+          cp sales_ad.html /tmp/sales-ad-v1.html
+          cp sales_ad_v2.html index.html
+          mv sales_ad_v2.html /tmp/sales-ad-v2.html
+      - name: Render v2
+        run: |
+          mkdir -p renders dist
+          hyperframes render --output renders/ai-cm-render-sales-v2-video.mp4 --fps 30 --quality standard --workers 2
+      - name: Generate audio
+        run: bash scripts/generate_sales_audio.sh dist
+      - name: Mux v2 master
+        run: |
+          ffmpeg -hide_banner -loglevel error -y -i renders/ai-cm-render-sales-v2-video.mp4 -i dist/ai_cm_render_sales_audio.wav -t 15 -map 0:v:0 -map 1:a:0 -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k -ar 48000 -movflags +faststart dist/ai_cm_render_sales_v2.mp4
+      - name: Verify v2 media
+        run: |
+          ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,r_frame_rate -show_entries format=duration -of json dist/ai_cm_render_sales_v2.mp4 | tee dist/v2-video-probe.json
+          ffprobe -v error -select_streams a:0 -show_entries stream=codec_name,codec_type,sample_rate,channels -of json dist/ai_cm_render_sales_v2.mp4 | tee dist/v2-audio-probe.json
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 dist/ai_cm_render_sales_v2.mp4)" = h264
+          test "$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 dist/ai_cm_render_sales_v2.mp4)" = aac
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 dist/ai_cm_render_sales_v2.mp4)" = 1080
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 dist/ai_cm_render_sales_v2.mp4)" = 1920
+          duration="$(ffprobe -v error -show_entries format=duration -of csv=p=0 dist/ai_cm_render_sales_v2.mp4)"
+          awk -v d="$duration" 'BEGIN{exit !(d>=14.9 && d<=15.1)}'
+      - name: Confirm v1 and BridgePatch preserved
+        run: |
+          test -s /tmp/bridgepatch-index.html
+          test -s /tmp/sales-ad-v1.html
+          grep -q 'BridgePatch' /tmp/bridgepatch-index.html
+          grep -q 'ai-cm-render-sales-v1' /tmp/sales-ad-v1.html
+      - name: Restore v2 source for artifact
+        run: cp /tmp/sales-ad-v2.html sales_ad_v2.html
+      - name: Upload v2 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-cm-render-sales-v2
+          path: |
+            dist/ai_cm_render_sales_v2.mp4
+            dist/v2-video-probe.json
+            dist/v2-audio-probe.json
+            sales_ad_v2.html
+          if-no-files-found: error
+          retention-days: 30
