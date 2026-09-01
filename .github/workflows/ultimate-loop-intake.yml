@@ -85,6 +85,12 @@ jobs:
         if: steps.credential.outputs.available == 'true'
         run: npm install -g @openai/codex
 
+      - name: Authenticate Codex executor
+        if: steps.credential.outputs.available == 'true'
+        run: |
+          set -euo pipefail
+          printf '%s' "$OPENAI_API_KEY" | codex login --with-api-key
+
       - name: Build executor prompt
         if: steps.credential.outputs.available == 'true'
         env:
@@ -115,7 +121,7 @@ jobs:
         if: steps.credential.outputs.available == 'true'
         run: |
           set -euo pipefail
-          codex exec --sandbox workspace-write --ignore-user-config "$(cat /tmp/ultimate-loop-prompt.txt)"
+          codex exec --sandbox workspace-write "$(cat /tmp/ultimate-loop-prompt.txt)"
 
       - name: Validate implementation delta
         if: steps.credential.outputs.available == 'true'
