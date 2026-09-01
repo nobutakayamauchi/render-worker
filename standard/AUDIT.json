@@ -1,0 +1,25 @@
+{
+  "version": "standard-continuity-v2",
+  "hard_checks": {
+    "duration_sec_min": 14.9,
+    "duration_sec_max": 15.1,
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "minimum_cuts": 8,
+    "minimum_distinct_framings": 6,
+    "first_hook_sec_max": 1.0,
+    "end_card_sec_min": 2.0
+  },
+  "continuity_checks": {
+    "unnecessary_left_right_left_jump": "reject",
+    "focal_point_jump_without_reason": "reject",
+    "repeated_crop_without_semantic_change": "reject",
+    "motion_direction_mismatch": "warn-or-reject",
+    "cut_without_semantic_reason": "reject",
+    "filler_cut": "reject"
+  },
+  "truth_boundary": "Passing this audit qualifies the artifact as Continuity Trial v2 only. Final Standard still requires accepted generative multi-shot assets."
+}
