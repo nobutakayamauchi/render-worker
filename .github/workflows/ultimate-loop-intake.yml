@@ -115,7 +115,7 @@ jobs:
         if: steps.credential.outputs.available == 'true'
         run: |
           set -euo pipefail
-          codex exec --full-auto "$(cat /tmp/ultimate-loop-prompt.txt)"
+          codex exec --sandbox workspace-write --ignore-user-config "$(cat /tmp/ultimate-loop-prompt.txt)"
 
       - name: Validate implementation delta
         if: steps.credential.outputs.available == 'true'
