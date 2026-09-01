@@ -1,0 +1,102 @@
+name: Render AI CM Render Standard Continuity v2
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'sales_ad_standard_v2.html'
+      - 'standard/**'
+      - 'assets/**'
+      - 'scripts/generate_sales_audio.sh'
+      - '.github/workflows/render-sales-standard-v2.yml'
+jobs:
+  render-standard-v2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-cjk
+          npm install -g hyperframes@0.8.19
+      - name: Validate continuity sources
+        run: |
+          test -f sales_ad_standard_v2.html
+          test -f standard/NARRATIVE.json
+          test -f standard/CONTINUITY_GRAPH.json
+          test -f standard/SHOT_PLAN.json
+          test -f standard/CONTINUITY.json
+          test -f standard/AUDIT.json
+          grep -q 'ai-cm-render-standard-v2' sales_ad_standard_v2.html
+          grep -q 'CONTINUITY TRIAL v2' sales_ad_standard_v2.html
+          grep -q 'standard-continuity-v2' standard/SHOT_PLAN.json
+          node -e "for (const f of ['standard/NARRATIVE.json','standard/CONTINUITY_GRAPH.json','standard/SHOT_PLAN.json','standard/CONTINUITY.json','standard/AUDIT.json']) JSON.parse(require('fs').readFileSync(f,'utf8'));"
+          test "$(node -e "const p=require('./standard/SHOT_PLAN.json'); console.log(p.shots.filter(s=>s.id!=='END').length)")" -ge 8
+      - name: Prepare isolated v2
+        run: |
+          cp index.html /tmp/bridgepatch-index.html
+          cp sales_ad.html /tmp/sales-v1.html
+          cp sales_ad_v2.html /tmp/sales-v2.html
+          cp sales_ad_v3.html /tmp/sales-v3.html
+          cp sales_ad_standard_trial.html /tmp/standard-trial.html
+          cp sales_ad_standard_v2.html index.html
+          mv sales_ad_standard_v2.html /tmp/standard-v2.html
+      - name: Render
+        run: |
+          mkdir -p renders dist
+          hyperframes render --output renders/ai-cm-render-standard-v2-video.mp4 --fps 30 --quality standard --workers 2
+      - name: Audio
+        run: bash scripts/generate_sales_audio.sh dist
+      - name: Mux
+        run: ffmpeg -hide_banner -loglevel error -y -i renders/ai-cm-render-standard-v2-video.mp4 -i dist/ai_cm_render_sales_audio.wav -t 15 -map 0:v:0 -map 1:a:0 -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k -ar 48000 -movflags +faststart dist/ai_cm_render_standard_v2.mp4
+      - name: Verify media
+        run: |
+          ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate -show_entries format=duration -of json dist/ai_cm_render_standard_v2.mp4 | tee dist/standard-v2-probe.json
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 dist/ai_cm_render_standard_v2.mp4)" = h264
+          test "$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 dist/ai_cm_render_standard_v2.mp4)" = aac
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 dist/ai_cm_render_standard_v2.mp4)" = 1080
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 dist/ai_cm_render_standard_v2.mp4)" = 1920
+          d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 dist/ai_cm_render_standard_v2.mp4); awk -v d="$d" 'BEGIN{exit !(d>=14.9 && d<=15.1)}'
+      - name: Continuity policy checks
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const g=JSON.parse(fs.readFileSync('standard/CONTINUITY_GRAPH.json','utf8'));
+          const shots=g.shots;
+          if(shots.length<8) throw new Error('too few cuts');
+          for(let i=1;i<shots.length;i++){
+            const a=shots[i-1].focal_point,b=shots[i].focal_point;
+            const d=Math.hypot(a.x-b.x,a.y-b.y);
+            if(d>0.24) throw new Error(`focal jump ${shots[i-1].shot_id}->${shots[i].shot_id}: ${d}`);
+            if(!shots[i].transition_reason) throw new Error(`missing cut reason ${shots[i].shot_id}`);
+          }
+          const roles=new Set(shots.map(s=>s.semantic_role));
+          if(roles.size<6) throw new Error('insufficient semantic roles');
+          fs.writeFileSync('dist/continuity-audit-runtime.json',JSON.stringify({pass:true,shots:shots.length,semantic_roles:roles.size,max_allowed_focal_jump:0.24,truth_boundary:'Continuity Trial v2; not final generative Standard'},null,2));
+          NODE
+      - name: Preserve baselines
+        run: |
+          grep -q BridgePatch /tmp/bridgepatch-index.html
+          grep -q ai-cm-render-sales-v1 /tmp/sales-v1.html
+          grep -q ai-cm-render-sales-v2 /tmp/sales-v2.html
+          grep -q ai-cm-render-layered-v3 /tmp/sales-v3.html
+          grep -q ai-cm-render-standard-trial /tmp/standard-trial.html
+      - name: Restore source
+        run: cp /tmp/standard-v2.html sales_ad_standard_v2.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-cm-render-standard-continuity-v2
+          path: |
+            dist/ai_cm_render_standard_v2.mp4
+            dist/standard-v2-probe.json
+            dist/continuity-audit-runtime.json
+            sales_ad_standard_v2.html
+            standard/NARRATIVE.json
+            standard/CONTINUITY_GRAPH.json
+            standard/SHOT_PLAN.json
+            standard/CONTINUITY.json
+            standard/AUDIT.json
+          retention-days: 30
