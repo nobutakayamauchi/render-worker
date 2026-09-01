@@ -1,0 +1,117 @@
+name: Ultimate Loop Intake
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number to intake manually
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+concurrency:
+  group: ultimate-loop-intake-${{ github.event.issue.number || inputs.issue_number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  intake:
+    if: >-
+      github.actor != 'github-actions[bot]' &&
+      (
+        (github.event_name == 'issues' && contains(github.event.issue.body || '', '/goal ultimate loop')) ||
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body || '', '/goal ultimate loop')) ||
+        github.event_name == 'workflow_dispatch'
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve request
+        id: request
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          MANUAL_ISSUE_NUMBER: ${{ inputs.issue_number }}
+          ACTOR: ${{ github.actor }}
+          RUN_ID: ${{ github.run_id }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          number="${ISSUE_NUMBER:-${MANUAL_ISSUE_NUMBER:-}}"
+          if [ -z "$number" ]; then
+            echo "No issue number could be resolved" >&2
+            exit 2
+          fi
+
+          command_source="issue"
+          command_text="${ISSUE_BODY:-}"
+          if [ "$EVENT_NAME" = "issue_comment" ]; then
+            command_source="issue_comment"
+            command_text="${COMMENT_BODY:-}"
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            command_source="workflow_dispatch"
+            command_text="/goal ultimate loop"
+          fi
+
+          python - <<'PY'
+          import json, os, pathlib, datetime
+          payload = {
+              "schema": "ultimate-loop-intake/v1",
+              "repository": os.environ["REPOSITORY"],
+              "issue_number": int(os.environ.get("ISSUE_NUMBER") or os.environ.get("MANUAL_ISSUE_NUMBER")),
+              "issue_url": os.environ.get("ISSUE_URL") or None,
+              "event_name": os.environ["EVENT_NAME"],
+              "actor": os.environ["ACTOR"],
+              "run_id": int(os.environ["RUN_ID"]),
+              "command": "/goal ultimate loop",
+              "accepted": True,
+              "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "next_required_proof": "implementation_commit",
+          }
+          pathlib.Path("ultimate-loop-request.json").write_text(json.dumps(payload, indent=2) + "\n")
+          PY
+
+          echo "issue_number=$number" >> "$GITHUB_OUTPUT"
+          echo "### Ultimate Loop intake accepted" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Issue: #$number" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Event: $EVENT_NAME" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Actor: $ACTOR" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Intake run is **not** implementation success." >> "$GITHUB_STEP_SUMMARY"
+          echo "- Next proof required: a real implementation commit, then the target workflow run." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload immutable intake request
+        uses: actions/upload-artifact@v4
+        with:
+          name: ultimate-loop-request-${{ steps.request.outputs.issue_number }}-${{ github.run_id }}
+          path: ultimate-loop-request.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Mark missing executor handoff explicitly
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ steps.request.outputs.issue_number }}
+        run: |
+          set -euo pipefail
+          body=$(cat <<'EOF'
+          ULTIMATE_LOOP_INTAKE_OK — repo-native Issue/Issue-comment receiver fired successfully.
+
+          This proves the GitHub event reached Actions. It does **not** count as implementation success.
+
+          EXECUTOR_HANDOFF_REQUIRED: no implementation executor is configured inside this repository yet. The next valid proof remains:
+          implementation commit → target workflow run → Human Gate or concrete implementation blocker.
+
+          Do not re-trigger by posting an equivalent comment. The firing boundary is now observable; the remaining boundary is Intake → implementation executor.
+          EOF
+          )
+          gh api "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}/comments" -f body="$body"
