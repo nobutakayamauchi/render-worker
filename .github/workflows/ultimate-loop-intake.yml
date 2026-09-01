@@ -13,16 +13,16 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
   issues: write
-  actions: read
+  actions: write
 
 concurrency:
   group: ultimate-loop-intake-${{ github.event.issue.number || inputs.issue_number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
-  intake:
+  execute:
     if: >-
       github.actor != 'github-actions[bot]' &&
       (
@@ -31,19 +31,16 @@ jobs:
         github.event_name == 'workflow_dispatch'
       )
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - name: Resolve request
         id: request
         env:
-          EVENT_NAME: ${{ github.event_name }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_URL: ${{ github.event.issue.html_url }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
-          COMMENT_BODY: ${{ github.event.comment.body }}
           MANUAL_ISSUE_NUMBER: ${{ inputs.issue_number }}
-          ACTOR: ${{ github.actor }}
-          RUN_ID: ${{ github.run_id }}
-          REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
           number="${ISSUE_NUMBER:-${MANUAL_ISSUE_NUMBER:-}}"
@@ -51,67 +48,127 @@ jobs:
             echo "No issue number could be resolved" >&2
             exit 2
           fi
+          echo "issue_number=$number" >> "$GITHUB_OUTPUT"
 
-          command_source="issue"
-          command_text="${ISSUE_BODY:-}"
-          if [ "$EVENT_NAME" = "issue_comment" ]; then
-            command_source="issue_comment"
-            command_text="${COMMENT_BODY:-}"
-          elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            command_source="workflow_dispatch"
-            command_text="/goal ultimate loop"
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify executor credential
+        id: credential
+        run: |
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
           fi
 
-          python - <<'PY'
-          import json, os, pathlib, datetime
-          payload = {
-              "schema": "ultimate-loop-intake/v1",
-              "repository": os.environ["REPOSITORY"],
-              "issue_number": int(os.environ.get("ISSUE_NUMBER") or os.environ.get("MANUAL_ISSUE_NUMBER")),
-              "issue_url": os.environ.get("ISSUE_URL") or None,
-              "event_name": os.environ["EVENT_NAME"],
-              "actor": os.environ["ACTOR"],
-              "run_id": int(os.environ["RUN_ID"]),
-              "command": "/goal ultimate loop",
-              "accepted": True,
-              "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-              "next_required_proof": "implementation_commit",
-          }
-          pathlib.Path("ultimate-loop-request.json").write_text(json.dumps(payload, indent=2) + "\n")
-          PY
-
-          echo "issue_number=$number" >> "$GITHUB_OUTPUT"
-          echo "### Ultimate Loop intake accepted" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Issue: #$number" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Event: $EVENT_NAME" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Actor: $ACTOR" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Intake run is **not** implementation success." >> "$GITHUB_STEP_SUMMARY"
-          echo "- Next proof required: a real implementation commit, then the target workflow run." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload immutable intake request
-        uses: actions/upload-artifact@v4
-        with:
-          name: ultimate-loop-request-${{ steps.request.outputs.issue_number }}-${{ github.run_id }}
-          path: ultimate-loop-request.json
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Mark missing executor handoff explicitly
+      - name: Report concrete credential blocker
+        if: steps.credential.outputs.available != 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ steps.request.outputs.issue_number }}
+        run: |
+          body=$(cat <<'EOF'
+          TRIGGER_BLOCKER — Intake reached the implementation executor boundary, but `OPENAI_API_KEY` is not configured in repository Actions secrets.
+
+          The repo-native receiver is working. The remaining blocker is now concrete: Codex cannot authenticate, so no implementation commit can be produced.
+
+          Required recovery: configure repository Actions secret `OPENAI_API_KEY`, then issue `/goal ultimate loop` once. Do not count this blocker comment as implementation success.
+          EOF
+          )
+          gh api "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}/comments" -f body="$body"
+          exit 3
+
+      - name: Install Codex executor
+        if: steps.credential.outputs.available == 'true'
+        run: npm install -g @openai/codex
+
+      - name: Build executor prompt
+        if: steps.credential.outputs.available == 'true'
+        env:
           ISSUE_NUMBER: ${{ steps.request.outputs.issue_number }}
         run: |
           set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}" --jq '.title + "\n\n" + .body' > /tmp/issue.txt
+          cat > /tmp/ultimate-loop-prompt.txt <<'EOF'
+          You are the implementation executor for this repository's Ultimate Loop.
+
+          Implement the GitHub issue supplied below in the checked-out repository. This is an execution task, not a planning/comment task.
+
+          Mandatory invariants:
+          - Make real repository changes that satisfy the issue acceptance criteria.
+          - Preserve existing baselines unless the issue explicitly requires changing them.
+          - For Standard v4, whole-image crop/pan/zoom-only or fake duplicate-layer parallax is a FAIL.
+          - Create the requested Standard v4 planning/audit files, implementation HTML, workflow, and any supporting code/assets that can be generated locally.
+          - If an external generative/decomposition service is genuinely required and unavailable, implement everything possible up to that boundary and write a concrete machine-readable blocker artifact rather than pretending success.
+          - Run relevant local checks available in the repository.
+          - Do not merely add issue comments.
+          - Do not modify .github/workflows/ultimate-loop-intake.yml.
+
+          GitHub issue follows:
+          EOF
+          cat /tmp/issue.txt >> /tmp/ultimate-loop-prompt.txt
+
+      - name: Run Codex implementation executor
+        if: steps.credential.outputs.available == 'true'
+        run: |
+          set -euo pipefail
+          codex exec --full-auto "$(cat /tmp/ultimate-loop-prompt.txt)"
+
+      - name: Validate implementation delta
+        if: steps.credential.outputs.available == 'true'
+        id: delta
+        run: |
+          set -euo pipefail
+          if git diff --quiet && git diff --cached --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report executor no-change blocker
+        if: steps.credential.outputs.available == 'true' && steps.delta.outputs.changed != 'true'
+        env:
+          ISSUE_NUMBER: ${{ steps.request.outputs.issue_number }}
+        run: |
           body=$(cat <<'EOF'
-          ULTIMATE_LOOP_INTAKE_OK — repo-native Issue/Issue-comment receiver fired successfully.
-
-          This proves the GitHub event reached Actions. It does **not** count as implementation success.
-
-          EXECUTOR_HANDOFF_REQUIRED: no implementation executor is configured inside this repository yet. The next valid proof remains:
-          implementation commit → target workflow run → Human Gate or concrete implementation blocker.
-
-          Do not re-trigger by posting an equivalent comment. The firing boundary is now observable; the remaining boundary is Intake → implementation executor.
+          TRIGGER_BLOCKER — Codex executor authenticated and ran, but produced no repository delta. No implementation commit exists, so this is not launch success.
           EOF
           )
+          gh api "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}/comments" -f body="$body"
+          exit 4
+
+      - name: Commit and push implementation
+        if: steps.credential.outputs.available == 'true' && steps.delta.outputs.changed == 'true'
+        id: commit
+        env:
+          ISSUE_NUMBER: ${{ steps.request.outputs.issue_number }}
+        run: |
+          set -euo pipefail
+          git config user.name "ultimate-loop[bot]"
+          git config user.email "ultimate-loop[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Implement Ultimate Loop issue #${ISSUE_NUMBER}"
+          sha=$(git rev-parse HEAD)
+          git push origin HEAD:main
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Implementation commit: $sha" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Explicitly dispatch target workflow
+        if: steps.commit.outputs.sha != ''
+        env:
+          ISSUE_NUMBER: ${{ steps.request.outputs.issue_number }}
+          IMPLEMENTATION_SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          set -euo pipefail
+          # GITHUB_TOKEN-authored pushes do not recursively trigger normal push workflows.
+          # Therefore Ultimate Loop explicitly dispatches the target workflow after the implementation commit.
+          if [ -f .github/workflows/render-sales-standard-v4.yml ]; then
+            gh workflow run render-sales-standard-v4.yml --ref main
+            body="ULTIMATE_LOOP_EXECUTOR_OK — implementation commit ${IMPLEMENTATION_SHA} was pushed. Standard v4 workflow dispatch requested explicitly. This commit is the first valid implementation proof; wait for the workflow result/artifact before Human Gate."
+          else
+            body="ULTIMATE_LOOP_IMPLEMENTATION_COMMIT — ${IMPLEMENTATION_SHA} was pushed, but no .github/workflows/render-sales-standard-v4.yml exists after execution. This is a concrete post-implementation blocker; implementation commit exists but target workflow cannot be dispatched."
+          fi
           gh api "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}/comments" -f body="$body"
