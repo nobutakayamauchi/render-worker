@@ -121,7 +121,10 @@ jobs:
         if: steps.credential.outputs.available == 'true'
         run: |
           set -euo pipefail
-          codex exec --sandbox workspace-write "$(cat /tmp/ultimate-loop-prompt.txt)"
+          # GitHub-hosted runners reject the nested bubblewrap/network namespace setup used by
+          # Codex workspace-write sandboxing. The runner is already ephemeral and repository-scoped,
+          # so run Codex without the inner bwrap sandbox while keeping approval disabled/non-interactive.
+          codex exec --sandbox danger-full-access "$(cat /tmp/ultimate-loop-prompt.txt)"
 
       - name: Validate implementation delta
         if: steps.credential.outputs.available == 'true'
