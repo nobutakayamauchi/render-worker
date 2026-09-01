@@ -1,0 +1,12 @@
+{
+  "version": "standard-continuity-v2",
+  "duration_sec": 15,
+  "segments": [
+    {"role":"HOOK","start":0.0,"end":1.0,"intent":"prove source constraint","copy":"このCM、元画像は5枚だけです。"},
+    {"role":"SETUP","start":1.0,"end":3.3,"intent":"orient on the same subject before revealing detail"},
+    {"role":"TRANSFORMATION","start":3.3,"end":6.2,"intent":"move from person to meaningful work detail","copy":"静止画から、つながるカットへ。"},
+    {"role":"PROOF","start":6.2,"end":9.4,"intent":"re-establish space then move into proof","copy":"撮影なし。静止画3〜5枚を渡すだけ。"},
+    {"role":"PAYOFF","start":9.4,"end":12.8,"intent":"detail and short matched montage","copy":"視線までつないで、CMにする。"},
+    {"role":"OFFER","start":12.8,"end":15.0,"intent":"readable product offer and CTA"}
+  ]
+}
