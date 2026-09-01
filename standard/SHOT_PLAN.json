@@ -1,19 +1,19 @@
 {
-  "version": "standard-trial-0",
-  "truth_boundary": "This trial validates multi-cut rhythm with source-preserving reframes only. It is not the final generative Standard pipeline.",
+  "version": "standard-continuity-v2",
+  "truth_boundary": "Continuity Trial v2 uses source-preserving reframes to validate continuity-first editing. It is not the final generative Standard pipeline.",
   "duration_sec": 15,
   "fps": 30,
   "shots": [
-    {"id":"S01","source_image":"assets/01_email_reaction.png","type":"wide","start":0.0,"duration":1.2,"framing":"wide hero","motion":"slow push"},
-    {"id":"S02","source_image":"assets/01_email_reaction.png","type":"close_up","start":1.2,"duration":1.1,"framing":"upper-left detail","motion":"fast push"},
-    {"id":"S03","source_image":"assets/02_workflow_diverge.png","type":"detail","start":2.3,"duration":1.1,"framing":"center-right detail","motion":"slide left"},
-    {"id":"S04","source_image":"assets/02_workflow_diverge.png","type":"medium","start":3.4,"duration":1.3,"framing":"center medium","motion":"pull out"},
-    {"id":"S05","source_image":"assets/03_lunch_contrast.png","type":"insert","start":4.7,"duration":1.2,"framing":"lower detail","motion":"push down"},
-    {"id":"S06","source_image":"assets/04_afternoon_contrast.png","type":"medium","start":5.9,"duration":1.4,"framing":"left medium","motion":"slide right"},
-    {"id":"S07","source_image":"assets/05_final_payoff.png","type":"close_up","start":7.3,"duration":1.4,"framing":"center close","motion":"push in"},
-    {"id":"S08","source_image":"assets/05_final_payoff.png","type":"wide","start":8.7,"duration":1.5,"framing":"wide payoff","motion":"pull out"},
-    {"id":"S09","source_image":"assets/03_lunch_contrast.png","type":"rapid_montage","start":10.2,"duration":0.85,"framing":"top crop","motion":"snap zoom"},
-    {"id":"S10","source_image":"assets/04_afternoon_contrast.png","type":"rapid_montage","start":11.05,"duration":0.85,"framing":"right crop","motion":"snap zoom"},
-    {"id":"END","type":"end_card","start":11.9,"duration":3.1,"framing":"full","motion":"text reveal"}
+    {"id":"S01","source_image":"assets/01_email_reaction.png","type":"wide","start":0.0,"duration":1.0,"framing":"centered hero wide","semantic_role":"hero","motion":"subtle push"},
+    {"id":"S02","source_image":"assets/01_email_reaction.png","type":"medium","start":1.0,"duration":1.2,"framing":"same hero centered medium","semantic_role":"reaction","motion":"matched push"},
+    {"id":"S03","source_image":"assets/02_workflow_diverge.png","type":"detail","start":2.2,"duration":1.1,"framing":"center detail aligned to prior gaze target","semantic_role":"detail","motion":"micro push"},
+    {"id":"S04","source_image":"assets/02_workflow_diverge.png","type":"medium","start":3.3,"duration":1.4,"framing":"center medium reaction return","semantic_role":"reaction-return","motion":"gentle pull"},
+    {"id":"S05","source_image":"assets/03_lunch_contrast.png","type":"insert","start":4.7,"duration":1.5,"framing":"center insert","semantic_role":"insert","motion":"small push"},
+    {"id":"S06","source_image":"assets/04_afternoon_contrast.png","type":"wide","start":6.2,"duration":1.6,"framing":"center wide orientation reset","semantic_role":"orientation-reset","motion":"slow pull"},
+    {"id":"S07","source_image":"assets/05_final_payoff.png","type":"close","start":7.8,"duration":1.6,"framing":"center close proof","semantic_role":"proof","motion":"small push"},
+    {"id":"S08","source_image":"assets/05_final_payoff.png","type":"medium","start":9.4,"duration":1.6,"framing":"same subject center medium payoff","semantic_role":"payoff","motion":"gentle pull"},
+    {"id":"S09","source_image":"assets/03_lunch_contrast.png","type":"detail","start":11.0,"duration":0.9,"framing":"center matched montage detail","semantic_role":"matched-montage-a","motion":"micro push"},
+    {"id":"S10","source_image":"assets/04_afternoon_contrast.png","type":"detail","start":11.9,"duration":0.9,"framing":"center matched montage detail","semantic_role":"matched-montage-b","motion":"micro push"},
+    {"id":"END","type":"end_card","start":12.8,"duration":2.2,"framing":"full","semantic_role":"offer","motion":"text reveal"}
   ]
 }
