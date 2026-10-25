@@ -81,6 +81,13 @@ jobs:
           gh api "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}/comments" -f body="$body"
           exit 3
 
+      - name: Set up patched Node.js
+        if: steps.credential.outputs.available == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '>=22.23.4 <23'
+          check-latest: true
+
       - name: Install Codex executor
         if: steps.credential.outputs.available == 'true'
         run: npm install -g @openai/codex

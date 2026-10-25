@@ -1,0 +1,36 @@
+name: HTTP2Shell runtime check
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '>=22.23.4 <23'
+          check-latest: true
+      - name: Verify patched runtime and Brotli round trip
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { brotliCompressSync, brotliDecompressSync } from 'node:zlib';
+          const [major, minor, patch] = process.versions.node.split('.').map(Number);
+          assert(major === 22 && (minor > 23 || (minor === 23 && patch >= 4)), 'Unpatched or unexpected Node.js runtime');
+          const input = Buffer.from('HTTP2Shell remediation smoke test');
+          assert.deepEqual(brotliDecompressSync(brotliCompressSync(input)), input);
+          console.log(JSON.stringify({node: process.versions.node, brotli: process.versions.brotli, executable: process.execPath}));
+          JS
+      - name: Verify existing renderer CLI loads
+        run: |
+          npm install -g --ignore-scripts --no-audit --no-fund hyperframes@0.8.19
+          hyperframes --version
